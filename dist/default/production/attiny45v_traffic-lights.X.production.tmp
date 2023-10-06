@@ -22,29 +22,29 @@
   <FILE>dist/default/production/attiny45v_traffic-lights.X.production.lss</FILE>
  </OUTPUT_FILES>
  <LABELS>
-  <STATE><FILE>firmware.asm</FILE><LINE>29</LINE></STATE>
-  <RESET_vect><FILE>firmware.asm</FILE><LINE>39</LINE></RESET_vect>
-  <TIMER1_COMPA><FILE>firmware.asm</FILE><LINE>174</LINE></TIMER1_COMPA>
-  <INIT><FILE>firmware.asm</FILE><LINE>43</LINE></INIT>
-  <LOOP><FILE>firmware.asm</FILE><LINE>69</LINE></LOOP>
-  <_S0><FILE>firmware.asm</FILE><LINE>71</LINE></_S0>
-  <_S1><FILE>firmware.asm</FILE><LINE>88</LINE></_S1>
-  <TIMER_ON><FILE>firmware.asm</FILE><LINE>195</LINE></TIMER_ON>
-  <_S0_TIMER><FILE>firmware.asm</FILE><LINE>80</LINE></_S0_TIMER>
-  <END><FILE>firmware.asm</FILE><LINE>163</LINE></END>
-  <TIMER_OFF><FILE>firmware.asm</FILE><LINE>186</LINE></TIMER_OFF>
-  <_S2><FILE>firmware.asm</FILE><LINE>109</LINE></_S2>
-  <_S1_TIMER><FILE>firmware.asm</FILE><LINE>99</LINE></_S1_TIMER>
-  <DELAY><FILE>firmware.asm</FILE><LINE>201</LINE></DELAY>
-  <MCU_SLEEP><FILE>firmware.asm</FILE><LINE>166</LINE></MCU_SLEEP>
-  <_S3><FILE>firmware.asm</FILE><LINE>133</LINE></_S3>
-  <_S2_TIMER><FILE>firmware.asm</FILE><LINE>117</LINE></_S2_TIMER>
-  <_CYCLE_DONE><FILE>firmware.asm</FILE><LINE>121</LINE></_CYCLE_DONE>
-  <_S2_NEXT><FILE>firmware.asm</FILE><LINE>126</LINE></_S2_NEXT>
-  <_S4><FILE>firmware.asm</FILE><LINE>147</LINE></_S4>
-  <_S3_TIMER><FILE>firmware.asm</FILE><LINE>141</LINE></_S3_TIMER>
-  <_S4_TIMER><FILE>firmware.asm</FILE><LINE>158</LINE></_S4_TIMER>
-  <_l1><FILE>firmware.asm</FILE><LINE>205</LINE></_l1>
-  <_l0><FILE>firmware.asm</FILE><LINE>207</LINE></_l0>
+  <STATE><FILE>firmware.asm</FILE><LINE>23</LINE></STATE>
+  <RESET_vect><FILE>firmware.asm</FILE><LINE>33</LINE></RESET_vect>
+  <TIMER1_COMPA><FILE>firmware.asm</FILE><LINE>173</LINE></TIMER1_COMPA>
+  <INIT><FILE>firmware.asm</FILE><LINE>37</LINE></INIT>
+  <LOOP><FILE>firmware.asm</FILE><LINE>68</LINE></LOOP>
+  <_S0><FILE>firmware.asm</FILE><LINE>70</LINE></_S0>
+  <_S1><FILE>firmware.asm</FILE><LINE>87</LINE></_S1>
+  <TIMER_ON><FILE>firmware.asm</FILE><LINE>194</LINE></TIMER_ON>
+  <_S0_TIMER><FILE>firmware.asm</FILE><LINE>79</LINE></_S0_TIMER>
+  <END><FILE>firmware.asm</FILE><LINE>162</LINE></END>
+  <TIMER_OFF><FILE>firmware.asm</FILE><LINE>185</LINE></TIMER_OFF>
+  <_S2><FILE>firmware.asm</FILE><LINE>108</LINE></_S2>
+  <_S1_TIMER><FILE>firmware.asm</FILE><LINE>98</LINE></_S1_TIMER>
+  <DELAY><FILE>firmware.asm</FILE><LINE>200</LINE></DELAY>
+  <MCU_SLEEP><FILE>firmware.asm</FILE><LINE>165</LINE></MCU_SLEEP>
+  <_S3><FILE>firmware.asm</FILE><LINE>132</LINE></_S3>
+  <_S2_TIMER><FILE>firmware.asm</FILE><LINE>116</LINE></_S2_TIMER>
+  <_CYCLE_DONE><FILE>firmware.asm</FILE><LINE>120</LINE></_CYCLE_DONE>
+  <_S2_NEXT><FILE>firmware.asm</FILE><LINE>125</LINE></_S2_NEXT>
+  <_S4><FILE>firmware.asm</FILE><LINE>146</LINE></_S4>
+  <_S3_TIMER><FILE>firmware.asm</FILE><LINE>140</LINE></_S3_TIMER>
+  <_S4_TIMER><FILE>firmware.asm</FILE><LINE>157</LINE></_S4_TIMER>
+  <_l1><FILE>firmware.asm</FILE><LINE>204</LINE></_l1>
+  <_l0><FILE>firmware.asm</FILE><LINE>206</LINE></_l0>
  </LABELS>
 </ASSEMBLER_INFO>

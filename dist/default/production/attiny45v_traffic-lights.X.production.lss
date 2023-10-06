@@ -1,10 +1,10 @@
 
-AVRASM ver. 2.2.7  firmware.asm Fri Oct 06 19:23:41 2023
+AVRASM ver. 2.2.7  firmware.asm Fri Oct 06 21:12:23 2023
 
 [builtin](2): Including file '/home/sergeyyarkov/.mchp_packs/Microchip/ATtiny_DFP/3.0.151/avrasm/inc\tn45def.inc'
-firmware.asm(19): Including file 'definitions.asm'
+firmware.asm(13): Including file 'definitions.asm'
 [builtin](2): Including file '/home/sergeyyarkov/.mchp_packs/Microchip/ATtiny_DFP/3.0.151/avrasm/inc\tn45def.inc'
-firmware.asm(19): Including file 'definitions.asm'
+firmware.asm(13): Including file 'definitions.asm'
                                  
                                  ; Project name: Traffic Lights
                                  
@@ -702,12 +702,6 @@ firmware.asm(19): Including file 'definitions.asm'
                                  ;
                                  ; Written by Sergey Yarkov 06.10.2023
                                  
-                                 ; CPU Clock Freq = 1MHz (with CKDIV8)
-                                 ; Timer prescaler = Fsyc / 16384
-                                 ; Freq(t) = 1MHz / 16384 = 61.03515625 Hz
-                                 ; Tick(t) = 1 / Freq(t) = 1 / 61.03515625 = 16384 uS (0.016384 sec)
-                                 ; SumTicks = 1 sec / 0.016384 sec = 61
-                                 
                                  .LIST
                                      
                                  .INCLUDE "definitions.asm"
@@ -757,6 +751,11 @@ firmware.asm(19): Including file 'definitions.asm'
 000008 2700                          clr		t1
 000009 bb08                          out		LED_PORT, 	t1
                                  
+                                     
+                                     ; Freq(t) = 1MHz / 16384 = 61.03515625 Hz
+                                     ; Tick(t) = 1 / Freq(t) = 1 / 61.03515625 = 16384 uS (0.016384 sec)
+                                     ; SumTicks = 1 sec / 0.016384 sec = 61
+                                     
                                      ; Setup 8-bit timer-1 in CTC mode
 00000a e800                          ldi		t1, (1<<CTC1)
 00000b bf00                          out		TCCR1, t1					; setup timer
