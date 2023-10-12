@@ -3,8 +3,8 @@
 ; Source code: https://github.com/sergeyyarkov/attiny24a_traffic-lights 
 ; Device: ATtiny45v
 ; Assembler: AVR macro assembler 2.2.7
-; Clock frequency: 1MHz
-; Fuses: lfuse: , hfuse: , efuse: , lock:
+; Clock frequency: 128 kHz
+; Fuses: lfuse: 0xd4, hfuse: 0xdf, efuse: 0xff, lock: 0xff
 ;
 ; Written by Sergey Yarkov 06.10.2023
 
@@ -16,7 +16,7 @@
     ldi		t1, @1
     sts		@0, t1
 .ENDMACRO
-
+    
 .DSEG
 .ORG	SRAM_START
 
@@ -33,24 +33,22 @@ STATE: 	.BYTE 1
 RESET_vect:
     ldi		t1, LOW(RAMEND)
     out		SPL, t1
-
+     
 INIT:
+    ; Setup ports
     ldi		t1, 	(1<<ROAD_R_LED) | (1<<ROAD_Y_LED) | (1<<ROAD_G_LED) | (1<<WALK_R_LED) |	(1<<WALK_G_LED)
     out		DDRB, 	t1
     clr		t1
     out		LED_PORT, 	t1
-
-    
-    ; Freq(t) = 1MHz / 16384 = 61.03515625 Hz
-    ; Tick(t) = 1 / Freq(t) = 1 / 61.03515625 = 16384 uS (0.016384 sec)
-    ; SumTicks = 1 sec / 0.016384 sec = 61
-    
-    ; Setup 8-bit timer-1 in CTC mode
-    ldi		t1, (1<<CTC1)
-    out		TCCR1, t1					; setup timer
+  
+    ; ====== Setup 8-bit Timer Counter 1 =======================================
+    ; Freq(t) = 128kHz / 1024 = 125Hz
+    ; Tick(t) = 1 / Freq(t) = 1 / 125Hz = uS (0.008 sec)
+    ; Ticks per second = 1 sec / 0.008 sec = 125
+    ; ==========================================================================
     clr 	t1						; clear timer counter register
     out		TCNT1, t1				
-    ldi		t1, 61
+    ldi		t1, 125						; <== 1 second 
     out		OCR1A, t1
     ldi		t1, (1<<OCIE1A)					; enable output compare A interrupt
     out		TIMSK, t1
@@ -60,6 +58,7 @@ INIT:
     ori		t1, (1<<SM1)
     out		MCUCR, t1
 	
+    ; Setup global variables
     clr		cycles
     stsi	STATE, 0
 	
@@ -73,7 +72,7 @@ _S0:								; State 0
     sbi		LED_PORT, WALK_G_LED	
     sbi		LED_PORT, ROAD_R_LED	
     rcall	TIMER_ON
-    cpi		timer_secs, 5
+    cpi		timer_secs, DELAY_STATE_0
     breq	_S0_TIMER
     rjmp	END
 _S0_TIMER:
@@ -88,7 +87,7 @@ _S1:								; State 1
     cpi		t3, 1
     brne	_S2
     rcall	TIMER_ON
-    cpi		timer_secs, 2
+    cpi		timer_secs, DELAY_STATE_1
     breq	_S1_TIMER
     sbi		LED_PORT, ROAD_R_LED
     rcall	DELAY
@@ -110,7 +109,7 @@ _S2:								; State 2
     brne	_S3
     sbi		LED_PORT, ROAD_Y_LED
     rcall	TIMER_ON
-    cpi		timer_secs, 2
+    cpi		timer_secs, DELAY_STATE_2
     breq	_S2_TIMER
     rjmp	END
 _S2_TIMER:
@@ -134,7 +133,7 @@ _S3:								; State 3
     brne	_S4
     sbi		LED_PORT, ROAD_G_LED
     rcall	TIMER_ON
-    cpi		timer_secs, 5
+    cpi		timer_secs, DELAY_STATE_3
     breq	_S3_TIMER
     rjmp	END
 _S3_TIMER:
@@ -156,7 +155,7 @@ _S4:								; State 4
     rjmp	END
 _S4_TIMER:
     cbi		LED_PORT, ROAD_G_LED
-    stsi	STATE, 2
+    stsi	STATE, DELAY_STATE_4
     set
     rcall TIMER_OFF
 END:
@@ -200,9 +199,9 @@ TIMER_ON:
 DELAY:
     push	t1
     push	t2			
-    ldi		t2, 0xff	
+    ldi		t2, 60	
 _l1:
-    ldi		t1, 0xff	
+    ldi		t1, 150
 _l0:
     dec		t1			
     brne	_l0		
@@ -210,4 +209,4 @@ _l0:
     brne	_l1			
     pop		t2			
     pop		t1			
-    ret						
+    ret				 		

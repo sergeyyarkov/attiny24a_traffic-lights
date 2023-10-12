@@ -1,5 +1,5 @@
 
-AVRASM ver. 2.2.7  firmware.asm Fri Oct 06 21:12:23 2023
+AVRASM ver. 2.2.7  firmware.asm Thu Oct 12 22:35:12 2023
 
 [builtin](2): Including file '/home/sergeyyarkov/.mchp_packs/Microchip/ATtiny_DFP/3.0.151/avrasm/inc\tn45def.inc'
 firmware.asm(13): Including file 'definitions.asm'
@@ -697,8 +697,8 @@ firmware.asm(13): Including file 'definitions.asm'
                                  ; Source code: https://github.com/sergeyyarkov/attiny24a_traffic-lights 
                                  ; Device: ATtiny45v
                                  ; Assembler: AVR macro assembler 2.2.7
-                                 ; Clock frequency: 1MHz
-                                 ; Fuses: lfuse: , hfuse: , efuse: , lock:
+                                 ; Clock frequency: 128 kHz
+                                 ; Fuses: lfuse: 0xd4, hfuse: 0xdf, efuse: 0xff, lock: 0xff
                                  ;
                                  ; Written by Sergey Yarkov 06.10.2023
                                  
@@ -721,13 +721,21 @@ firmware.asm(13): Including file 'definitions.asm'
                                  .EQU	LED_DIR  = DDRB
                                  .EQU	LED_PORT = PORTB
                                  
-                                 .EQU	MAX_CYCLES = 2
+                                 .EQU	MAX_CYCLES = 10
+                                 .EQU	TIMER1_PRESCALE_MASK = (1<<CS13) | (1<<CS11) | (1<<CS10) ; 1024
+                                     
+                                 ; Seconds
+                                 .EQU	DELAY_STATE_0 = 30
+                                 .EQU	DELAY_STATE_1 = 2
+                                 .EQU	DELAY_STATE_2 = 2
+                                 .EQU	DELAY_STATE_3 = 30
+                                 .EQU	DELAY_STATE_4 = 2
                                  
                                  .MACRO stsi
                                      ldi		t1, @1
                                      sts		@0, t1
                                  .ENDMACRO
-                                 
+                                     
                                  .DSEG
                                  .ORG	SRAM_START
                                  
@@ -739,195 +747,194 @@ firmware.asm(13): Including file 'definitions.asm'
 000000 c003                          rjmp	RESET_vect
                                  
                                  .ORG	0x03
-000003 c075                          rjmp	TIMER1_COMPA
+000003 c073                          rjmp	TIMER1_COMPA
                                  
                                  RESET_vect:
 000004 e50f                          ldi		t1, LOW(RAMEND)
 000005 bf0d                          out		SPL, t1
-                                 
+                                      
                                  INIT:
+                                     ; Setup ports
 000006 e10f                          ldi		t1, 	(1<<ROAD_R_LED) | (1<<ROAD_Y_LED) | (1<<ROAD_G_LED) | (1<<WALK_R_LED) |	(1<<WALK_G_LED)
 000007 bb07                          out		DDRB, 	t1
 000008 2700                          clr		t1
 000009 bb08                          out		LED_PORT, 	t1
-                                 
-                                     
-                                     ; Freq(t) = 1MHz / 16384 = 61.03515625 Hz
-                                     ; Tick(t) = 1 / Freq(t) = 1 / 61.03515625 = 16384 uS (0.016384 sec)
-                                     ; SumTicks = 1 sec / 0.016384 sec = 61
-                                     
-                                     ; Setup 8-bit timer-1 in CTC mode
-00000a e800                          ldi		t1, (1<<CTC1)
-00000b bf00                          out		TCCR1, t1					; setup timer
-00000c 2700                          clr 	t1						; clear timer counter register
-00000d bd0f                          out		TCNT1, t1				
-00000e e30d                          ldi		t1, 61
-00000f bd0e                          out		OCR1A, t1
-000010 e400                          ldi		t1, (1<<OCIE1A)					; enable output compare A interrupt
-000011 bf09                          out		TIMSK, t1
+                                   
+                                     ; ====== Setup 8-bit Timer Counter 1 =======================================
+                                     ; Freq(t) = 128kHz / 1024 = 125Hz
+                                     ; Tick(t) = 1 / Freq(t) = 1 / 125Hz = uS (0.008 sec)
+                                     ; Ticks per second = 1 sec / 0.008 sec = 125
+                                     ; ==========================================================================
+00000a 2700                          clr 	t1						; clear timer counter register
+00000b bd0f                          out		TCNT1, t1				
+00000c e70d                          ldi		t1, 125						; <== 1 second 
+00000d bd0e                          out		OCR1A, t1
+00000e e400                          ldi		t1, (1<<OCIE1A)					; enable output compare A interrupt
+00000f bf09                          out		TIMSK, t1
                                  	
                                      ; Setup sleep mode in power-down
-000012 b705                          in 		t1,  MCUCR
-000013 6100                          ori		t1, (1<<SM1)
-000014 bf05                          out		MCUCR, t1
+000010 b705                          in 		t1,  MCUCR
+000011 6100                          ori		t1, (1<<SM1)
+000012 bf05                          out		MCUCR, t1
                                  	
-000015 2455                          clr		cycles
-000016 e000
-000017 9300 0060                     stsi	STATE, 0
+                                     ; Setup global variables
+000013 2455                          clr		cycles
+000014 e000
+000015 9300 0060                     stsi	STATE, 0
                                  	
-000019 9478                          sei
+000017 9478                          sei
                                  
                                  LOOP:	
-00001a 9120 0060                     lds		t3, STATE	
+000018 9120 0060                     lds		t3, STATE	
                                  _S0:								; State 0
-00001c 3020                          cpi		t3, 0
-00001d f469                          brne	_S1
-00001e 9ac4                          sbi		LED_PORT, WALK_G_LED	
-00001f 9ac0                          sbi		LED_PORT, ROAD_R_LED	
-000020 d069                          rcall	TIMER_ON
-000021 3035                          cpi		timer_secs, 5
-000022 f009                          breq	_S0_TIMER
-000023 c04e                          rjmp	END
+00001a 3020                          cpi		t3, 0
+00001b f469                          brne	_S1
+00001c 9ac4                          sbi		LED_PORT, WALK_G_LED	
+00001d 9ac0                          sbi		LED_PORT, ROAD_R_LED	
+00001e d069                          rcall	TIMER_ON
+00001f 313e                          cpi		timer_secs, DELAY_STATE_0
+000020 f009                          breq	_S0_TIMER
+000021 c04e                          rjmp	END
                                  _S0_TIMER:
-000024 98c0                          cbi		LED_PORT, ROAD_R_LED
-000025 e001
-000026 9300 0060                     stsi	STATE, 1
-000028 d05a                          rcall TIMER_OFF
-000029 94e8                          clt
-00002a c047                          rjmp	END
+000022 98c0                          cbi		LED_PORT, ROAD_R_LED
+000023 e001
+000024 9300 0060                     stsi	STATE, 1
+000026 d05a                          rcall TIMER_OFF
+000027 94e8                          clt
+000028 c047                          rjmp	END
                                  	
                                  	
                                  _S1:								; State 1
-00002b 3021                          cpi		t3, 1
-00002c f489                          brne	_S2
-00002d d05c                          rcall	TIMER_ON
-00002e 3032                          cpi		timer_secs, 2
-00002f f029                          breq	_S1_TIMER
-000030 9ac0                          sbi		LED_PORT, ROAD_R_LED
-000031 d05c                          rcall	DELAY
-000032 98c0                          cbi		LED_PORT, ROAD_R_LED
-000033 d05a                          rcall	DELAY
-000034 c03d                          rjmp	END
+000029 3021                          cpi		t3, 1
+00002a f489                          brne	_S2
+00002b d05c                          rcall	TIMER_ON
+00002c 3032                          cpi		timer_secs, DELAY_STATE_1
+00002d f029                          breq	_S1_TIMER
+00002e 9ac0                          sbi		LED_PORT, ROAD_R_LED
+00002f d05c                          rcall	DELAY
+000030 98c0                          cbi		LED_PORT, ROAD_R_LED
+000031 d05a                          rcall	DELAY
+000032 c03d                          rjmp	END
                                  _S1_TIMER:
-000035 98c1                          cbi		LED_PORT, ROAD_Y_LED
-000036 2d05                          mov 	t1, cycles
-000037 3002                          cpi		t1, MAX_CYCLES
-000038 f5d4                          brge	MCU_SLEEP
-000039 e002
-00003a 9300 0060                     stsi	STATE, 2
-00003c d046                          rcall TIMER_OFF
-00003d c034                          rjmp	END
+000033 98c1                          cbi		LED_PORT, ROAD_Y_LED
+000034 2d05                          mov 	t1, cycles
+000035 300a                          cpi		t1, MAX_CYCLES
+000036 f5d4                          brge	MCU_SLEEP
+000037 e002
+000038 9300 0060                     stsi	STATE, 2
+00003a d046                          rcall TIMER_OFF
+00003b c034                          rjmp	END
                                  	
                                  	
                                  _S2:								; State 2
-00003e 3022                          cpi		t3, 2
-00003f f4a9                          brne	_S3
-000040 9ac1                          sbi		LED_PORT, ROAD_Y_LED
-000041 d048                          rcall	TIMER_ON
-000042 3032                          cpi		timer_secs, 2
-000043 f009                          breq	_S2_TIMER
-000044 c02d                          rjmp	END
+00003c 3022                          cpi		t3, 2
+00003d f4a9                          brne	_S3
+00003e 9ac1                          sbi		LED_PORT, ROAD_Y_LED
+00003f d048                          rcall	TIMER_ON
+000040 3032                          cpi		timer_secs, DELAY_STATE_2
+000041 f009                          breq	_S2_TIMER
+000042 c02d                          rjmp	END
                                  _S2_TIMER:
-000045 98c1                          cbi		LED_PORT, ROAD_Y_LED
-000046 f00e                          brts	_CYCLE_DONE
-000047 c006                          rjmp	_S2_NEXT
+000043 98c1                          cbi		LED_PORT, ROAD_Y_LED
+000044 f00e                          brts	_CYCLE_DONE
+000045 c006                          rjmp	_S2_NEXT
                                  _CYCLE_DONE:
-000048 98c3                          cbi		LED_PORT, WALK_R_LED
-000049 9453                          inc		cycles
-00004a e000
-00004b 9300 0060                     stsi	STATE, 0
-00004d c024                          rjmp	END
+000046 98c3                          cbi		LED_PORT, WALK_R_LED
+000047 9453                          inc		cycles
+000048 e000
+000049 9300 0060                     stsi	STATE, 0
+00004b c024                          rjmp	END
                                  _S2_NEXT:
-00004e 98c4                          cbi		LED_PORT, WALK_G_LED	
-00004f 9ac3                          sbi		LED_PORT, WALK_R_LED	
-000050 e003
-000051 9300 0060                     stsi	STATE, 3
-000053 d02f                          rcall 	TIMER_OFF
-000054 c01d                          rjmp	END
+00004c 98c4                          cbi		LED_PORT, WALK_G_LED	
+00004d 9ac3                          sbi		LED_PORT, WALK_R_LED	
+00004e e003
+00004f 9300 0060                     stsi	STATE, 3
+000051 d02f                          rcall 	TIMER_OFF
+000052 c01d                          rjmp	END
                                  	
                                  _S3:								; State 3
-000055 3023                          cpi		t3, 3
-000056 f459                          brne	_S4
-000057 9ac2                          sbi		LED_PORT, ROAD_G_LED
-000058 d031                          rcall	TIMER_ON
-000059 3035                          cpi		timer_secs, 5
-00005a f009                          breq	_S3_TIMER
-00005b c016                          rjmp	END
+000053 3023                          cpi		t3, 3
+000054 f459                          brne	_S4
+000055 9ac2                          sbi		LED_PORT, ROAD_G_LED
+000056 d031                          rcall	TIMER_ON
+000057 313e                          cpi		timer_secs, DELAY_STATE_3
+000058 f009                          breq	_S3_TIMER
+000059 c016                          rjmp	END
                                  _S3_TIMER:
-00005c 98c2                          cbi		LED_PORT, ROAD_G_LED
-00005d e004
-00005e 9300 0060                     stsi	STATE, 4
-000060 d022                          rcall TIMER_OFF
-000061 c010                          rjmp	END
+00005a 98c2                          cbi		LED_PORT, ROAD_G_LED
+00005b e004
+00005c 9300 0060                     stsi	STATE, 4
+00005e d022                          rcall TIMER_OFF
+00005f c010                          rjmp	END
                                  	
                                  _S4:								; State 4
-000062 3024                          cpi		t3, 4
-000063 f471                          brne	END
-000064 d025                          rcall	TIMER_ON
-000065 3032                          cpi		timer_secs, 2
-000066 f029                          breq	_S4_TIMER
-000067 9ac2                          sbi		LED_PORT, ROAD_G_LED
-000068 d025                          rcall	DELAY
-000069 98c2                          cbi		LED_PORT, ROAD_G_LED
-00006a d023                          rcall	DELAY
-00006b c006                          rjmp	END
+000060 3024                          cpi		t3, 4
+000061 f471                          brne	END
+000062 d025                          rcall	TIMER_ON
+000063 3032                          cpi		timer_secs, 2
+000064 f029                          breq	_S4_TIMER
+000065 9ac2                          sbi		LED_PORT, ROAD_G_LED
+000066 d025                          rcall	DELAY
+000067 98c2                          cbi		LED_PORT, ROAD_G_LED
+000068 d023                          rcall	DELAY
+000069 c006                          rjmp	END
                                  _S4_TIMER:
-00006c 98c2                          cbi		LED_PORT, ROAD_G_LED
-00006d e002
-00006e 9300 0060                     stsi	STATE, 2
-000070 9468                          set
-000071 d011                          rcall TIMER_OFF
+00006a 98c2                          cbi		LED_PORT, ROAD_G_LED
+00006b e002
+00006c 9300 0060                     stsi	STATE, DELAY_STATE_4
+00006e 9468                          set
+00006f d011                          rcall TIMER_OFF
                                  END:
-000072 cfa7                          rjmp	LOOP
+000070 cfa7                          rjmp	LOOP
                                  	
                                  MCU_SLEEP:
-000073 b705                          in		t1, MCUCR
-000074 6200                          ori		t1, (1<<SE)
-000075 bf05                          out		MCUCR, t1
-000076 2700                          clr		t1
-000077 bb08                          out		LED_PORT, t1
-000078 9588                          sleep
+000071 b705                          in		t1, MCUCR
+000072 6200                          ori		t1, (1<<SE)
+000073 bf05                          out		MCUCR, t1
+000074 2700                          clr		t1
+000075 bb08                          out		LED_PORT, t1
+000076 9588                          sleep
                                  	
                                  TIMER1_COMPA:							; Increment timer seconds register
-000079 930f                          push	t1
-00007a 931f                          push	t2
-00007b b70f                          in		t1, SREG
-00007c 9533                          inc		timer_secs
-00007d 2711                          clr		t2
-00007e bd1f                          out		TCNT1, t2
-00007f bf0f                          out		SREG, t1
-000080 911f                          pop		t2
-000081 910f                          pop		t1
-000082 9518                          reti
+000077 930f                          push	t1
+000078 931f                          push	t2
+000079 b70f                          in		t1, SREG
+00007a 9533                          inc		timer_secs
+00007b 2711                          clr		t2
+00007c bd1f                          out		TCNT1, t2
+00007d bf0f                          out		SREG, t1
+00007e 911f                          pop		t2
+00007f 910f                          pop		t1
+000080 9518                          reti
                                  
                                  TIMER_OFF:
-000083 b700                          in		t1, TCCR1
-000084 7f00                          andi	t1, ~(TIMER1_PRESCALE_MASK)
-000085 bf00                          out		TCCR1, t1
-000086 2700                          clr		t1
-000087 bd0f                          out		TCNT1, t1
-000088 2f30                          mov 	timer_secs, t1
-000089 9508                          ret
+000081 b700                          in		t1, TCCR1
+000082 7f04                          andi	t1, ~(TIMER1_PRESCALE_MASK)
+000083 bf00                          out		TCCR1, t1
+000084 2700                          clr		t1
+000085 bd0f                          out		TCNT1, t1
+000086 2f30                          mov 	timer_secs, t1
+000087 9508                          ret
                                  
                                  TIMER_ON:
-00008a b700                          in		t1, TCCR1
-00008b 600f                          ori		t1, TIMER1_PRESCALE_MASK
-00008c bf00                          out		TCCR1, t1
-00008d 9508                          ret
+000088 b700                          in		t1, TCCR1
+000089 600b                          ori		t1, TIMER1_PRESCALE_MASK
+00008a bf00                          out		TCCR1, t1
+00008b 9508                          ret
                                  	
                                  DELAY:
-00008e 930f                          push	t1
-00008f 931f                          push	t2			
-000090 ef1f                          ldi		t2, 0xff	
+00008c 930f                          push	t1
+00008d 931f                          push	t2			
+00008e e31c                          ldi		t2, 60	
                                  _l1:
-000091 ef0f                          ldi		t1, 0xff	
+00008f e906                          ldi		t1, 150
                                  _l0:
-000092 950a                          dec		t1			
-000093 f7f1                          brne	_l0		
-000094 951a                          dec		t2			
-000095 f7d9                          brne	_l1			
-000096 911f                          pop		t2			
-000097 910f                          pop		t1			
+000090 950a                          dec		t1			
+000091 f7f1                          brne	_l0		
+000092 951a                          dec		t2			
+000093 f7d9                          brne	_l1			
+000094 911f                          pop		t2			
+000095 910f                          pop		t1			
 
 
 RESOURCE USE INFORMATION
@@ -947,7 +954,7 @@ counted separately from r26..r31 here.
 "ATtiny45" register use summary:
 x  :   0 y  :   0 z  :   0 r0 :   0 r1 :   0 r2 :   0 r3 :   0 r4 :   0 
 r5 :   3 r6 :   0 r7 :   0 r8 :   0 r9 :   0 r10:   0 r11:   0 r12:   0 
-r13:   0 r14:   0 r15:   0 r16:  55 r17:   8 r18:   6 r19:   7 r20:   0 
+r13:   0 r14:   0 r15:   0 r16:  53 r17:   8 r18:   6 r19:   7 r20:   0 
 r21:   0 r22:   0 r23:   0 r24:   0 r25:   0 r26:   0 r27:   0 r28:   0 
 r29:   0 r30:   0 r31:   0 
 Registers used: 5 out of 35 (14.3%)
@@ -962,9 +969,9 @@ brvs  :   0 bset  :   0 bst   :   0 cbi   :   9 cbr   :   0 clc   :   0
 clh   :   0 cli   :   0 cln   :   0 clr   :   6 cls   :   0 clt   :   1 
 clv   :   0 clz   :   0 com   :   0 cp    :   0 cpc   :   0 cpi   :  11 
 cpse  :   0 dec   :   2 eor   :   0 icall :   0 ijmp  :   0 in    :   5 
-inc   :   2 ld    :   0 ldd   :   0 ldi   :  14 lds   :   1 lpm   :   0 
+inc   :   2 ld    :   0 ldd   :   0 ldi   :  13 lds   :   1 lpm   :   0 
 lsl   :   0 lsr   :   0 mov   :   2 movw  :   0 neg   :   0 nop   :   0 
-or    :   0 ori   :   3 out   :  15 pop   :   4 push  :   4 rcall :  14 
+or    :   0 ori   :   3 out   :  14 pop   :   4 push  :   4 rcall :  14 
 ret   :   3 reti  :   1 rjmp  :  14 rol   :   0 ror   :   0 sbc   :   0 
 sbci  :   0 sbi   :   7 sbic  :   0 sbis  :   0 sbiw  :   0 sbr   :   0 
 sbrc  :   0 sbrs  :   0 sec   :   0 seh   :   0 sei   :   1 sen   :   0 
@@ -976,7 +983,7 @@ Instructions used: 28 out of 105 (26.7%)
 "ATtiny45" memory use summary [bytes]:
 Segment   Begin    End      Code   Data   Used    Size   Use%
 ---------------------------------------------------------------
-[.cseg] 0x000000 0x000132    302      0    302    4096   7.4%
+[.cseg] 0x000000 0x00012e    298      0    298    4096   7.3%
 [.dseg] 0x000060 0x000061      0      1      1     256   0.4%
 [.eseg] 0x000000 0x000000      0      0      0     256   0.0%
 

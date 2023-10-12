@@ -85,7 +85,7 @@
                   value="Press to select which tool pack to use"/>
         <property key="communication.interface" value="isp"/>
         <property key="communication.interface.jtag" value="2wire"/>
-        <property key="communication.speed" value="0.125"/>
+        <property key="communication.speed" value="0.012"/>
         <property key="debugoptions.debug-startup" value="Use system settings"/>
         <property key="debugoptions.reset-behaviour" value="Use system settings"/>
         <property key="debugoptions.simultaneous.debug" value="false"/>
@@ -123,6 +123,10 @@
                   value="Press to select which tool pack to use"/>
       </Tool>
       <item path="definitions.asm" ex="true" overriding="false">
+        <AVR-ASM>
+        </AVR-ASM>
+        <AVR-Global>
+        </AVR-Global>
       </item>
       <snap>
         <property key="AutoSelectMemRanges" value="auto"/>
@@ -134,7 +138,7 @@
                   value="Press to select which tool pack to use"/>
         <property key="communication.interface" value="isp"/>
         <property key="communication.interface.jtag" value="2wire"/>
-        <property key="communication.speed" value="0.125"/>
+        <property key="communication.speed" value="0.012"/>
         <property key="debugoptions.debug-startup" value="Use system settings"/>
         <property key="debugoptions.reset-behaviour" value="Use system settings"/>
         <property key="debugoptions.simultaneous.debug" value="false"/>
