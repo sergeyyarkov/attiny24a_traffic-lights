@@ -43,7 +43,7 @@ INIT:
   
     ; ====== Setup 8-bit Timer Counter 1 =======================================
     ; Freq(t) = 128kHz / 1024 = 125Hz
-    ; Tick(t) = 1 / Freq(t) = 1 / 125Hz = uS (0.008 sec)
+    ; Tick(t) = 1 / Freq(t) = 1 / 125Hz = 8000uS (0.008 sec)
     ; Ticks per second = 1 sec / 0.008 sec = 125
     ; ==========================================================================
     clr 	t1						; clear timer counter register
